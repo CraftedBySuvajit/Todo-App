@@ -1,0 +1,6 @@
+{
+  "name": "Todo App",
+  "description": "A high-performance AI-powered task management system that breaks down complex goals into actionable tasks using Gemini.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

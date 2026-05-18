@@ -1,0 +1,73 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // -------------------------------------------------------------------------
+    // Phase 3: Global Helpers
+    // -------------------------------------------------------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // -------------------------------------------------------------------------
+    // Pillar 2: Validation Blueprints
+    // -------------------------------------------------------------------------
+    function isValidTask(task) {
+      return task.keys().hasAll(['title', 'status', 'priority', 'userId', 'createdAt', 'tags', 'subTasks']) &&
+             task.title is string && task.title.size() > 0 && task.title.size() <= 200 &&
+             task.status in ['todo', 'in-progress', 'completed'] &&
+             task.priority in ['low', 'medium', 'high'] &&
+             task.userId is string && task.userId == request.auth.uid &&
+             task.tags is list && task.tags.size() <= 10 &&
+             task.subTasks is list && task.subTasks.size() <= 50 &&
+             (task.keys().hasAny(['notes']) ? (task.notes == null || (task.notes is string && task.notes.size() <= 5000)) : true) &&
+             (task.keys().hasAny(['userEmail']) ? (task.userEmail == null || (task.userEmail is string)) : true) &&
+             (task.keys().hasAny(['workingDate']) ? (task.workingDate == null || (task.workingDate is string)) : true) &&
+             (task.keys().hasAny(['dueDate']) ? (task.dueDate == null || (task.dueDate is string)) : true) &&
+             (task.keys().hasAny(['enableEmailAlerts']) ? (task.enableEmailAlerts is bool) : true) &&
+             (task.keys().hasAny(['order']) ? task.order is number : true);
+    }
+
+    // -------------------------------------------------------------------------
+    // Global Safety Net
+    // -------------------------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: tasks
+    // -------------------------------------------------------------------------
+    match /tasks/{taskId} {
+      allow get: if isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn() && 
+                       isValidTask(incoming());
+      
+      allow update: if isSignedIn() &&
+                       isOwner(existing().userId) &&
+                       isValidTask(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt;
+                       
+      allow delete: if isOwner(existing().userId);
+    }
+  }
+}
