@@ -287,7 +287,7 @@ function AuthView() {
       } else if (error.code === 'auth/operation-not-allowed') {
         toast.error('Google Sign-In is disabled. You MUST enable it in your Firebase Console > Authentication > Sign-in method.', { duration: 8000 });
       } else if (error.code === 'auth/unauthorized-domain') {
-        toast.error('This domain is not authorized. Add localhost to Firebase Console > Authentication > Authorized domains.', { duration: 8000 });
+        toast.error(`This domain (${window.location.hostname}) is not authorized. Add it to Firebase Console > Authentication > Settings > Authorized domains.`, { duration: 8000 });
       } else {
         toast.error('Authentication failed: ' + error.message, { duration: 5000 });
       }
